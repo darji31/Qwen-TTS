@@ -360,8 +360,16 @@ def should_retry_variant(status_or_err: str) -> bool:
     )
 
 
+def make_client(server: str) -> Client:
+    # Reason: public Gradio URLs via tunnel often exceed httpx default (~5s) on first /config fetch.
+    try:
+        return Client(server, verbose=False, httpx_kwargs={"timeout": 300.0})
+    except TypeError:
+        return Client(server, verbose=False)
+
+
 def run_generation(server: str, text: str, voice_instruction: str, language: str) -> None:
-    client = Client(server, verbose=False)
+    client = make_client(server)
     attempt_errors = []
     config = client.config or {}
     comp_map = get_component_map(config)
@@ -482,7 +490,21 @@ def main():
     text = sys.argv[2]
     voice_instruction = (sys.argv[3] or "").strip()
     language = sys.argv[4]
-    run_generation(server, text, voice_instruction, language)
+    try:
+        run_generation(server, text, voice_instruction, language)
+    except Exception as exc:
+        print(
+            json.dumps(
+                {
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                    "server": server,
+                    "python": sys.executable,
+                    "hint": "If bridge runs on the same VM as Gradio, use server http://127.0.0.1:8000",
+                }
+            )
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":

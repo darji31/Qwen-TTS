@@ -22,9 +22,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLIENT_SCRIPT = os.path.join(ROOT, "scripts", "remote_gradio_voice_client.py")
-DEFAULT_SERVER = os.environ.get(
-    "QWEN_GRADIO_URL", "https://vtq2qdhv-8000.thundercompute.net"
-)
+# Prefer localhost when bridge and Gradio run on the same machine (avoids tunnel timeouts).
+DEFAULT_SERVER = os.environ.get("QWEN_GRADIO_URL", "http://127.0.0.1:8000")
 
 
 def run_client(server: str, text: str, voice_instruction: str, language: str) -> dict:
@@ -36,13 +35,22 @@ def run_client(server: str, text: str, voice_instruction: str, language: str) ->
         cwd=ROOT,
     )
     raw = (proc.stdout or "").strip()
+    err = (proc.stderr or "").strip()
     if not raw:
-        return {
+        payload = {
             "error": "Qwen bridge subprocess produced no output",
             "returncode": proc.returncode,
-            "stderr": (proc.stderr or "")[-2000:],
+            "stderr": err[-2000:],
             "python": sys.executable,
+            "server": server,
         }
+        if "ReadTimeout" in err or "ConnectError" in err:
+            payload["hint"] = (
+                "Gradio unreachable at this URL. Is demo running on port 8000? "
+                "Try: curl http://127.0.0.1:8000/config | head "
+                'Or POST with "server":"http://127.0.0.1:8000"'
+            )
+        return payload
     # Client prints a single JSON line on success; errors may be last line too.
     for line in reversed(raw.splitlines()):
         line = line.strip()

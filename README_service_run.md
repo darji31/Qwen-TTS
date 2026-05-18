@@ -70,14 +70,19 @@ chmod +x scripts/run_http_bridge.sh
 
 Open port **7861** in Thunder Compute (same way you exposed 8000).
 
-Test:
+Test (Gradio demo must be running on port **8000** first):
 
 ```bash
+# quick check Gradio is up
+curl -s --max-time 10 http://127.0.0.1:8000/config | head -c 80
+
 curl -s -X POST "http://127.0.0.1:7861/generate" \
   -H "Content-Type: application/json" \
-  -d '{"text":"HI how are you","voice_instruction":"soft tone","language":"English"}' \
+  -d '{"text":"HI how are you","voice_instruction":"soft tone","language":"English","server":"http://127.0.0.1:8000"}' \
   | head -c 200
 ```
+
+Use `http://127.0.0.1:8000` from the same VM (not the public Thunder URL) to avoid tunnel timeouts.
 
 In the **other website**, if it has any of these settings, use them instead of the built-in Qwen Python command:
 
