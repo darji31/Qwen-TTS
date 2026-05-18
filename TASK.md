@@ -10,3 +10,6 @@
 
 ## Discovered During Work
 - [ ] Consider pinning or isolating dependencies for external packages (`indextts`, `styletts2`, `moshi`) that conflict with this project's `transformers` range.
+
+## Completed (2026-05-18)
+- [x] Document and add `gradio_client` / `requests` for remote Gradio TTS clients (`ModuleNotFoundError` fix).
